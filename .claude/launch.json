@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "metro-3d",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/esbuild/bin/esbuild", "--servedir=.", "--serve=5173"],
+      "port": 5173
+    }
+  ]
+}
