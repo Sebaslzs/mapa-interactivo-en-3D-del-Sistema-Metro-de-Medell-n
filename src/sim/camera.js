@@ -12,6 +12,7 @@ export class CameraDirector {
     this.fly = null;
     this.follow = null;
     this.cinematic = true;
+    this.flatY = null; // en modo mapa 2D todo objetivo se proyecta a esta altura
     this._prevTarget = new THREE.Vector3();
     this.userActive = false;
     controls.addEventListener('start', () => {
@@ -26,8 +27,19 @@ export class CameraDirector {
   }
 
   // Vuelo hacia (target, position) con arco vertical para distancias largas.
+  flat(v) {
+    if (this.flatY !== null) v.y = this.flatY;
+    return v;
+  }
+
   flyTo(target, position, duration = 2, opts = {}) {
     const c = this.camera;
+    if (this.flatY !== null) {
+      position = position.clone();
+      target = target.clone();
+      position.y = Math.max(8, position.y - target.y) + this.flatY;
+      target.y = this.flatY;
+    }
     const from = { p: c.position.clone(), t: this.controls.target.clone() };
     const dist = from.p.distanceTo(position);
     return new Promise((resolve) => {
@@ -63,7 +75,7 @@ export class CameraDirector {
       getTarget, manual: false, dist: opts.dist ?? 26, height: opts.height ?? 0.45, side: opts.side ?? 0.35,
       getDir: opts.getDir, smooth: opts.smooth ?? 2.5,
     };
-    this._prevTarget.copy(getTarget());
+    this._prevTarget.copy(this.flat(getTarget().clone()));
   }
   setFollowOpts(o) {
     if (this.follow) Object.assign(this.follow, o);
@@ -91,7 +103,7 @@ export class CameraDirector {
     }
     if (this.follow) {
       const F = this.follow;
-      const tgt = F.getTarget();
+      const tgt = this.flat(F.getTarget().clone());
       const delta = new THREE.Vector3().subVectors(tgt, this._prevTarget);
       // El usuario puede orbitar: se desplaza cámara y objetivo juntos
       c.position.add(delta);
@@ -107,11 +119,15 @@ export class CameraDirector {
         if (dir) {
           const back = dir.clone().setY(0).normalize();
           const side = new THREE.Vector3(-back.z, 0, back.x);
+          // En el mapa 2D la cámara va más alta e inclinada (vista de mapa)
+          const flat = this.flatY !== null;
+          const dist = flat ? Math.max(F.dist * 2.8, 75) : F.dist;
+          const h = flat ? 0.9 : F.height;
           const want = tgt
             .clone()
-            .addScaledVector(back, -F.dist * Math.cos(F.height))
-            .addScaledVector(side, F.dist * F.side)
-            .add(new THREE.Vector3(0, F.dist * Math.sin(F.height) + 2, 0));
+            .addScaledVector(back, -dist * Math.cos(h))
+            .addScaledVector(side, dist * (flat ? 0.12 : F.side))
+            .add(new THREE.Vector3(0, dist * Math.sin(h) + 2, 0));
           const s = 1 - Math.exp(-dt * F.smooth);
           c.position.lerp(want, s);
         }

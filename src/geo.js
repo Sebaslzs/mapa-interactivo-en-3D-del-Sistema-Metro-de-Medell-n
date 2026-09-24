@@ -1,10 +1,12 @@
-// Proyección geográfica (lat/lon -> escena) y modelo de elevación del
-// Valle de Aburrá. El relieve se construye a partir de un perfil de valle
-// alrededor del río Medellín, corregido con puntos de control de altitud
-// aproximada (estaciones, cerros tutelares) y ruido fractal.
+// Proyección geográfica (lat/lon -> escena) y relieve del Valle de Aburrá.
+// La altura sale de un modelo digital de elevación real (SRTM, vía Terrain
+// Tiles de AWS Open Data; ver scripts/fetch-dem.mjs y src/data/dem.js). El
+// modelo aproximado anterior (perfil de valle + puntos de control + ruido)
+// solo se usa como respaldo fuera del área cubierta por los datos.
 
 import { M_PER_UNIT, VEX, BASE_ELEV } from './config.js';
 import { Noise2D, smoothstep, lerp, clamp } from './util/rand.js';
+import { DEM_CORE, DEM_RING, DEM_SOURCE } from './data/dem.js';
 
 export const LAT0 = 6.245;
 export const LON0 = -75.575;
@@ -27,9 +29,10 @@ export const RIVER_LATLON = [
   [6.205, -75.5815], [6.213, -75.58], [6.225, -75.5785], [6.235, -75.578], [6.245, -75.5775],
   [6.253, -75.5745], [6.261, -75.5715], [6.27, -75.568], [6.276, -75.5665], [6.285, -75.5625],
   [6.295, -75.5575], [6.305, -75.5545], [6.316, -75.552], [6.326, -75.549], [6.337, -75.541],
-  [6.35, -75.532], [6.37, -75.52], [6.4, -75.502], [6.44, -75.47], [6.48, -75.44],
+  [6.342, -75.527], [6.346, -75.511], [6.355, -75.495], [6.37, -75.47], [6.395, -75.44], [6.43, -75.41],
 ];
-export const RIVER = RIVER_LATLON.map(([la, lo]) => project(la, lo));
+// El trazado se densifica y se ajusta al cauce real más abajo (ver snapRiver).
+export let RIVER = RIVER_LATLON.map(([la, lo]) => project(la, lo));
 
 // Altitud del cauce según latitud (m.s.n.m.).
 const RIVER_ELEV = [
@@ -47,7 +50,36 @@ function riverElev(lat) {
 }
 
 // Distancia firmada (en metros, positiva al oriente) al eje del río.
+// Dentro del valle se consulta un campo precalculado (interpolación bilineal).
+const RD = { x0: -1100, z0: -1350, x1: 1250, z1: 1350, step: 8, field: null };
 export function riverDistance(x, z) {
+  if (RD.field && x >= RD.x0 && z >= RD.z0 && x < RD.x1 && z < RD.z1) {
+    const fx = (x - RD.x0) / RD.step;
+    const fz = (z - RD.z0) / RD.step;
+    const i = Math.floor(fx);
+    const j = Math.floor(fz);
+    const tx = fx - i;
+    const tz = fz - j;
+    const w = RD.w;
+    const F = RD.field;
+    const a = F[j * w + i];
+    const b = F[j * w + i + 1];
+    const c = F[(j + 1) * w + i];
+    const d = F[(j + 1) * w + i + 1];
+    return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+  }
+  return riverDistanceExact(x, z);
+}
+function buildRiverField() {
+  RD.w = Math.ceil((RD.x1 - RD.x0) / RD.step) + 2;
+  RD.h = Math.ceil((RD.z1 - RD.z0) / RD.step) + 2;
+  const F = new Float32Array(RD.w * RD.h);
+  for (let j = 0; j < RD.h; j++) {
+    for (let i = 0; i < RD.w; i++) F[j * RD.w + i] = riverDistanceExact(RD.x0 + i * RD.step, RD.z0 + j * RD.step);
+  }
+  RD.field = F;
+}
+function riverDistanceExact(x, z) {
   let best = Infinity;
   let sign = 1;
   for (let i = 0; i < RIVER.length - 1; i++) {
@@ -159,8 +191,93 @@ function baseElevation(x, z) {
 // Precalcular la corrección de cada punto de control respecto al perfil base.
 for (const a of ANCHORS) a.delta = a.e - baseElevation(a.x, a.z);
 
-// Altitud (m.s.n.m.) en coordenadas de escena.
+// ---------------- Relieve real (DEM)
+function decodeDEM(g) {
+  const bin = atob(g.data);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const q = new Uint16Array(bytes.buffer);
+  const v = new Float32Array(q.length);
+  for (let i = 0; i < q.length; i++) v[i] = q[i] / 2;
+  return { ...g, v };
+}
+const DEMS = [decodeDEM(DEM_CORE), decodeDEM(DEM_RING)];
+export { DEM_SOURCE };
+
+// Muestra bilineal; devuelve null fuera de la cuadrícula.
+function demAt(G, lat, lon) {
+  const fi = (lon - G.lonW) / G.step;
+  const fj = (G.latN - lat) / G.step;
+  if (fi < 0 || fj < 0 || fi > G.w - 1 || fj > G.h - 1) return null;
+  const i = Math.min(G.w - 2, Math.floor(fi));
+  const j = Math.min(G.h - 2, Math.floor(fj));
+  const tx = fi - i;
+  const ty = fj - j;
+  const w = G.w;
+  const a = G.v[j * w + i];
+  const b = G.v[j * w + i + 1];
+  const c = G.v[(j + 1) * w + i];
+  const d = G.v[(j + 1) * w + i + 1];
+  return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+}
+
+// Altitud real (m.s.n.m.) en coordenadas de escena.
 export function elevation(x, z) {
+  const { lat, lon } = unproject(x, z);
+  for (const G of DEMS) {
+    const e = demAt(G, lat, lon);
+    if (e !== null) return e;
+  }
+  return modelElevation(x, z);
+}
+
+// Ajusta el río al fondo real del valle: densifica el trazado aproximado y
+// mueve cada punto hacia la cota más baja en su perpendicular (±450 m).
+function snapRiver() {
+  const src = RIVER;
+  const dense = [];
+  const STEP = 25;
+  for (let i = 0; i < src.length - 1; i++) {
+    const a = src[i];
+    const b = src[i + 1];
+    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / STEP));
+    for (let k = 0; k < n; k++) dense.push({ x: a.x + ((b.x - a.x) * k) / n, z: a.z + ((b.z - a.z) * k) / n });
+  }
+  dense.push({ ...src[src.length - 1] });
+  const out = dense.map((p, i) => {
+    const a = dense[Math.max(0, i - 1)];
+    const b = dense[Math.min(dense.length - 1, i + 1)];
+    let tx = b.x - a.x;
+    let tz = b.z - a.z;
+    const l = Math.hypot(tx, tz) || 1;
+    const nx = -tz / l;
+    const nz = tx / l;
+    const { lat, lon } = unproject(p.x, p.z);
+    if (!DEMS.some((G) => demAt(G, lat, lon) !== null)) return { ...p };
+    let best = Infinity;
+    let bd = 0;
+    for (let d = -45; d <= 45; d += 1.5) {
+      const e = elevation(p.x + nx * d, p.z + nz * d) + Math.abs(d) * 0.08; // leve preferencia por no alejarse
+      if (e < best) {
+        best = e;
+        bd = d;
+      }
+    }
+    return { x: p.x + nx * bd, z: p.z + nz * bd };
+  });
+  // Suavizado para que el cauce no zigzaguee
+  for (let pass = 0; pass < 3; pass++) {
+    for (let i = 1; i < out.length - 1; i++) {
+      out[i] = { x: (out[i - 1].x + 2 * out[i].x + out[i + 1].x) / 4, z: (out[i - 1].z + 2 * out[i].z + out[i + 1].z) / 4 };
+    }
+  }
+  RIVER = out;
+}
+snapRiver();
+buildRiverField();
+
+// Modelo aproximado (respaldo fuera del área con datos).
+export function modelElevation(x, z) {
   let e = baseElevation(x, z);
   let wsum = 0;
   let csum = 0;

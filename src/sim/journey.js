@@ -425,7 +425,7 @@ export class Journey {
     mesh.castShadow = true;
     mesh.matrixAutoUpdate = false;
     app.scene.add(mesh);
-    const veh = { kind: 'gondola', mesh, s: sA - 14, sw: new Swing(3), v: 0 };
+    const veh = { kind: 'gondola', mesh, rt, s: sA - 14, sw: new Swing(3), v: 0 };
     this.vehicle = veh;
     const place = () => {
       const slope = gondolaMatrix(rt.loopPath, ((veh.s % L) + L) % L, veh.sw, mesh.matrix);
@@ -559,6 +559,7 @@ export class Journey {
       const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       const s = e * path.length;
       path.pointAt(s, tgt);
+      app.director.flat(tgt);
       path.pointAt(Math.min(path.length, s + 25), want);
       dirv.subVectors(want, path.pointAt(Math.max(0, s - 25), _v)).setY(0);
       if (dirv.lengthSq() < 1e-4) dirv.set(0, 0, -1);

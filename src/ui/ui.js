@@ -45,8 +45,8 @@ export class UI {
     }).join('');
     this.root.innerHTML = `
       <header class="brand">
-        <div class="logo"><span class="l1">MAPA</span><span class="l2">METRO 3D</span></div>
-        <div class="sub">Sistema Integrado de Transporte del Valle de Aburrá<br><small>Datos: metrodemedellin.gov.co · metrodela80.gov.co</small></div>
+        <div class="brandmark"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#14263b"/><path d="M3 31 13 14l6 9 7-12 11 20z" fill="#3fa34d"/><path d="M5 34c9-6 21-6 30 0" stroke="#ffc20e" stroke-width="3.2" fill="none" stroke-linecap="round"/><circle cx="31" cy="9" r="3.6" fill="#ff8a3d"/></svg><span class="wm">Aburrá<b>3D</b></span></div>
+        <button class="sub" id="btn-about-top" title="Acerca de este proyecto">Movilidad del Valle de Aburrá en 3D<br><small>Proyecto independiente · no oficial</small></button>
       </header>
 
       <section class="panel planner" id="planner">
@@ -82,10 +82,13 @@ export class UI {
 
       <nav class="toolbar">
         <button id="btn-home" title="Vista general">${ICONS.home}<span>Vista general</span></button>
+        <button id="btn-2d" title="Ver el mapa en 2D con el trayecto proyectado">${ICONS.map}<span>Mapa 2D</span></button>
         <button id="btn-night" title="Día / noche">${ICONS.moon}<span>Noche</span></button>
         <button id="btn-facts" title="Datos del sistema">${ICONS.chart}<span>Datos</span></button>
         <button id="btn-help" title="Ayuda">${ICONS.help}<span>Ayuda</span></button>
       </nav>
+
+      <button class="unofficial" id="btn-about" title="Acerca de Aburrá 3D">${ICONS.info}<span>Proyecto no oficial · Acerca de</span></button>
 
       <button class="compass" id="compass" title="Orientar al norte"><span class="needle"></span><b>N</b></button>
 
@@ -166,7 +169,16 @@ export class UI {
       $('btn-night').innerHTML = n ? `${ICONS.sun}<span>Día</span>` : `${ICONS.moon}<span>Noche</span>`;
     });
     $('btn-facts').addEventListener('click', () => this.showFacts());
+    $('btn-2d').addEventListener('click', async () => {
+      const on = await this.app.setMap2D(!this.app.map2d.active);
+      $('btn-2d').innerHTML = on ? `${ICONS.cube}<span>Vista 3D</span>` : `${ICONS.map}<span>Mapa 2D</span>`;
+      $('btn-2d').classList.toggle('on', on);
+      $('btn-night').disabled = on;
+      document.body.classList.toggle('map2d', on);
+    });
     $('btn-help').addEventListener('click', () => this.showHelp());
+    $('btn-about').addEventListener('click', () => this.showAbout());
+    $('btn-about-top').addEventListener('click', () => this.showAbout());
     $('compass').addEventListener('click', () => this.app.faceNorth());
     $('modal').addEventListener('click', (e) => {
       if (e.target.id === 'modal') this.closeModal();
@@ -310,8 +322,8 @@ export class UI {
     el.className = 'anchor';
     el.innerHTML = `<div class="card3d ${cls}">${html}</div>`;
     const obj = new CSS2DObject(el);
-    obj.position.copy(pos);
-    this.app.scene.add(obj);
+    obj.position.copy(this.app.toView(pos.clone(), 1.5));
+    this.app.activeScene().add(obj);
     this.card = obj;
     el.querySelector('.x')?.addEventListener('click', () => this.closeCard());
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -614,6 +626,37 @@ export class UI {
     box.querySelectorAll('[data-l]').forEach((tr) => tr.addEventListener('click', () => this.showLine(tr.dataset.l)));
   }
 
+  showAbout() {
+    this.modal(`
+      <div class="about-head">
+        <div class="brandmark big"><svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#14263b"/><path d="M3 31 13 14l6 9 7-12 11 20z" fill="#3fa34d"/><path d="M5 34c9-6 21-6 30 0" stroke="#ffc20e" stroke-width="3.2" fill="none" stroke-linecap="round"/><circle cx="31" cy="9" r="3.6" fill="#ff8a3d"/></svg><span class="wm">Aburrá<b>3D</b></span></div>
+        <p>Mapa interactivo en 3D del sistema de transporte masivo del Valle de Aburrá, con planificador de viajes y simulación de recorridos.</p>
+        <span class="ver">Versión 1.0 · datos consultados el 23 de septiembre de 2026</span>
+      </div>
+      <div class="disclaimer">
+        <b>Proyecto independiente y no oficial.</b> Aburrá 3D no está afiliado a la Empresa de Transporte Masivo del Valle de Aburrá (Metro de Medellín) ni cuenta con su respaldo. «Metro de Medellín», «Metrocable», «Metroplús» y «Cívica» son marcas de sus respectivos titulares y aquí se mencionan solo para identificar el servicio. Para información oficial y en tiempo real consulta
+        <a href="https://www.metrodemedellin.gov.co" target="_blank" rel="noopener">metrodemedellin.gov.co</a>.
+      </div>
+      <h4>Fuentes de datos</h4>
+      <ul class="about-list">
+        <li><a href="https://www.metrodemedellin.gov.co/usuarios/sistema-integrado/" target="_blank" rel="noopener">metrodemedellin.gov.co · Sistema integrado</a>: líneas, estaciones, sitios de interés, servicios, rutas integradas y fichas técnicas.</li>
+        <li><a href="https://www.metrodemedellin.gov.co/usuarios/que-hacer-y-donde-ir-en-medellin" target="_blank" rel="noopener">metrodemedellin.gov.co · Qué hacer y dónde ir</a>: lugares turísticos y eventos de ciudad.</li>
+        <li><a href="https://metrodela80.gov.co/" target="_blank" rel="noopener">metrodela80.gov.co</a>: proyecto Metro de la 80 (Línea E).</li>
+      </ul>
+      <h4>Qué es aproximado</h4>
+      <ul class="about-list">
+        <li>Las coordenadas de estaciones y lugares, el relieve y la cuadrícula de calles del mapa 2D son aproximaciones, no cartografía oficial.</li>
+        <li>Las descripciones de los puntos de interés son texto de referencia general.</li>
+        <li>Los tiempos de viaje son estimaciones a partir de los tiempos y frecuencias publicados. El tiempo de la Línea E es una estimación propia.</li>
+        <li>El trazado de las rutas alimentadoras es ilustrativo; sus códigos sí son oficiales.</li>
+      </ul>
+      <h4>Créditos</h4>
+      <ul class="about-list">
+        <li>Hecho con <a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> y <a href="https://esbuild.github.io" target="_blank" rel="noopener">esbuild</a> (licencia MIT).</li>
+      </ul>
+      <p class="copy">© 2026 Sebaslzs. Todos los derechos reservados.</p>`);
+  }
+
   showHelp() {
     this.modal(`
       <h2>Cómo usar el mapa</h2>
@@ -626,7 +669,9 @@ export class UI {
         <li><b>Recorrido 3D:</b> elige tu viajero, el origen y el destino, y pulsa <i>Iniciar recorrido 3D</i>. La cámara vuela por la ruta y luego sigue al pasajero. Durante el viaje puedes orbitar con el ratón, pausar o cambiar la velocidad.</li>
         <li><b>Líneas:</b> muéstralas u ocúltalas desde la leyenda. Con ⓘ ves la ficha técnica oficial.</li>
       </ul>
-      <p class="fine">La escala vertical del relieve está exagerada (×1,7) y los vehículos se dibujan más grandes que su tamaño real para que se lean en el mapa. El trazado de las rutas alimentadoras es ilustrativo.</p>`);
+      <p class="fine">La escala vertical del relieve está exagerada (×1,7) y los vehículos se dibujan más grandes que su tamaño real para que se lean en el mapa. El trazado de las rutas alimentadoras es ilustrativo.</p>
+      <button class="primary" id="help-about">Acerca de Aburrá 3D</button>`);
+    document.getElementById('help-about').addEventListener('click', () => this.showAbout());
   }
 
   // ---------------------------------------------------------------- viaje

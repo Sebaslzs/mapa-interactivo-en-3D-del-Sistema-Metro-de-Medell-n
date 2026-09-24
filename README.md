@@ -1,6 +1,10 @@
-# Mapa Metro 3D: Sistema Integrado del Valle de Aburrá
+# Aburrá 3D: movilidad del Valle de Aburrá en 3D
 
-Aplicación web interactiva en 3D, de estilo *low poly*, de la red del Metro de Medellín: 12 líneas en operación más la Línea E (Metro de la 80), que está en construcción. Simula de forma animada el recorrido de un pasajero entre dos estaciones cualesquiera.
+Aplicación web interactiva en 3D, de estilo *low poly*, del sistema de transporte masivo del Valle de Aburrá: 12 líneas en operación más la Línea E (Metro de la 80), que está en construcción. Simula de forma animada el recorrido de un pasajero entre dos estaciones cualesquiera.
+
+> **Proyecto independiente y no oficial.** Aburrá 3D no está afiliado al Metro de Medellín ni cuenta con su respaldo. «Metro de Medellín», «Metrocable», «Metroplús» y «Cívica» son marcas de sus respectivos titulares y se mencionan solo con fines descriptivos. Para información oficial consulta [metrodemedellin.gov.co](https://www.metrodemedellin.gov.co).
+
+**Licencia:** © 2026 Sebaslzs. Todos los derechos reservados. El código es visible, pero no puede copiarse, modificarse, redistribuirse ni usarse comercialmente sin permiso escrito del autor. Consulta [LICENSE](LICENSE).
 
 ## Cómo ejecutarla
 
@@ -24,6 +28,7 @@ npm run build    # solo compila dist/app.js
 | Lugares turísticos | 19 hitos modelados y clicables, visibles a lo lejos: Plaza Botero, Biblioteca España, Pueblito Paisa, Estadio, Comuna 13, Parque Arví, Coltejer, Explora, Orquideorama, etc. |
 | Recorrido 3D | Ruta calculada con Dijkstra sobre la red, que suma los tiempos oficiales y la espera por frecuencia. Tiene cuatro momentos: **1)** un vuelo de la cámara por toda la ruta; **2)** el pasajero camina, valida la Cívica, espera y aborda; **3)** viaja parada a parada con cámara de seguimiento (cinemática o libre); **4)** hace los transbordos y llega, con resumen del viaje. |
 | Fichas flotantes | Tarjeta anclada en 3D con nombre, conexiones y transbordos (directos o peatonales), rutas integradas, puntos de interés, eventos de ciudad, servicios y dirección. |
+| Mapa 2D | El botón **Mapa 2D** cambia a un mapa plano estilo cartografía (calles, avenidas, río, parques y líneas oficiales) con cámara inclinada. El viaje se proyecta encima con el vehículo 3D, el avatar caminando y una estela roja del trayecto. Se puede alternar con la vista 3D incluso en medio de un viaje. |
 | Puntos de interés | Los 111 sitios que el Metro publica por estación son clicables. Cada uno abre su ficha con descripción, categoría, pin en el mapa, estaciones cercanas y distancia a pie. |
 | Modelos por sistema | Tren de 3 coches (con estela de partículas), tranvía con pantógrafo y chispas, telecabina con balanceo de péndulo y sombra, bus articulado (Línea 1), bus padrón (Líneas 2 y O), bus alimentador, tren ligero de la 80 y avión en el Olaya Herrera. |
 | Personajes | Tres avatares animados (estudiante, turista, arriero paisa) y usuarios en estaciones y lugares turísticos. |

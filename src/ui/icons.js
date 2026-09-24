@@ -26,6 +26,8 @@ export const ICONS = {
   layers: svg('<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/>'),
   zoom: svg('<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3M11 8v6M8 11h6"/>'),
   walk: svg('<circle cx="13" cy="4" r="2"/><path d="M10 21l2-6 3 3v3M9 11l3-4 3 3 3 1M12 7l-2 5 3 3"/>'),
+  map: svg('<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>'),
+  cube: svg('<path d="M12 2l9 5v10l-9 5-9-5V7l9-5zM3 7l9 5 9-5M12 12v10"/>'),
   skip: svg('<path d="M5 5l9 7-9 7zM17 5v14"/>'),
 };
 

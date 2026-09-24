@@ -1,15 +1,16 @@
 {
-  "name": "metro-medellin-3d",
+  "name": "aburra-3d",
   "version": "1.0.0",
-  "description": "Mapa interactivo 3D del Sistema Integrado de Transporte del Valle de Aburrá (Metro de Medellín) con simulación de recorridos.",
+  "description": "Aburrá 3D: mapa interactivo 3D del transporte masivo del Valle de Aburrá con simulación de recorridos. Proyecto independiente, no oficial.",
+  "author": "Sebaslzs",
   "private": true,
   "scripts": {
-    "build": "esbuild src/main.js --bundle --format=iife --minify --sourcemap --target=es2020 --outfile=dist/app.js",
+    "build": "esbuild src/main.js --bundle --format=iife --minify --sourcemap --legal-comments=eof --target=es2020 --outfile=dist/app.js",
     "dev": "esbuild src/main.js --bundle --format=iife --sourcemap --target=es2020 --outfile=dist/app.js --watch --servedir=. --serve=5173",
     "start": "npm run build && esbuild --servedir=. --serve=5173"
   },
-  "keywords": ["metro", "medellin", "threejs", "3d"],
-  "license": "MIT",
+  "keywords": ["medellin", "valle de aburra", "transporte", "threejs", "3d"],
+  "license": "UNLICENSED",
   "devDependencies": {
     "esbuild": "^0.28.2",
     "three": "^0.186.0"

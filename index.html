@@ -3,9 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <title>Metro de Medellín 3D</title>
-    <meta name="description" content="Mapa interactivo 3D del Sistema Integrado de Transporte del Valle de Aburrá con simulación de recorridos." />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%236DB843'/%3E%3Cpath d='M7 24V9l9 8 9-8v15' stroke='%23fff' stroke-width='3.2' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <title>Aburrá 3D · Movilidad del Valle de Aburrá</title>
+    <meta name="description" content="Aburrá 3D: mapa interactivo en 3D del sistema de transporte masivo del Valle de Aburrá, con planificador y simulación de recorridos. Proyecto independiente, no oficial." />
+    <meta name="author" content="Sebaslzs" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%2314263b'/%3E%3Cpath d='M3 31 13 14l6 9 7-12 11 20z' fill='%233fa34d'/%3E%3Cpath d='M5 34c9-6 21-6 30 0' stroke='%23ffc20e' stroke-width='3.2' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='31' cy='9' r='3.6' fill='%23ff8a3d'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -13,13 +14,17 @@
     <div id="ui"></div>
     <div id="loading">
       <div class="load-box">
-        <div class="logo big"><span class="l1">MAPA</span><span class="l2">METRO 3D</span></div>
-        <p class="load-sub">Valle de Aburrá · Medellín</p>
+        <div class="brandmark big">
+          <svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="10" fill="#14263b"/><path d="M3 31 13 14l6 9 7-12 11 20z" fill="#3fa34d"/><path d="M5 34c9-6 21-6 30 0" stroke="#ffc20e" stroke-width="3.2" fill="none" stroke-linecap="round"/><circle cx="31" cy="9" r="3.6" fill="#ff8a3d"/></svg>
+          <span class="wm">Aburrá<b>3D</b></span>
+        </div>
+        <p class="load-sub">Movilidad del Valle de Aburrá en 3D</p>
         <div class="load-track"><div id="load-bar"></div></div>
         <p id="load-step">Cargando…</p>
         <div class="load-lines">
           <i style="background:#0E5AA7"></i><i style="background:#F28C1E"></i><i style="background:#17A340"></i><i style="background:#E6007E"></i><i style="background:#FFC20E"></i><i style="background:#A6CE39"></i><i style="background:#8C5B23"></i><i style="background:#6F2C91"></i><i style="background:#E30613"></i><i style="background:#00788A"></i><i style="background:#5CB1B6"></i><i style="background:#F39A94"></i><i style="background:#EF7FAF"></i>
         </div>
+        <p class="load-legal">Proyecto independiente y no oficial. No está afiliado al Metro de Medellín ni cuenta con su respaldo.</p>
       </div>
       <noscript>Esta aplicación necesita JavaScript y WebGL.</noscript>
     </div>

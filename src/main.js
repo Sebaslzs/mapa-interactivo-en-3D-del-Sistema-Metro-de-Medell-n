@@ -22,6 +22,7 @@ import { CameraDirector } from './sim/camera.js';
 import { Router } from './sim/router.js';
 import { Journey } from './sim/journey.js';
 import { UI } from './ui/ui.js';
+import { Map2D } from './world/map2d.js';
 import { project } from './geo.js';
 import { mulberry32 } from './util/rand.js';
 import { SHADOW_SIZE } from './config.js';
@@ -144,6 +145,7 @@ class App {
     scene.add(this.feederGroup);
     const river = buildRiver(terrain);
     scene.add(river.mesh);
+    this.riverPath = river.path;
 
     this.progress('Levantando estaciones…', 46);
     await nextFrame();
@@ -191,6 +193,7 @@ class App {
     this.controls = controls;
     this.director = new CameraDirector(camera, controls);
     this.journey = new Journey(this);
+    this.map2d = new Map2D(this);
 
     this.progress('Invitando a los usuarios del Metro…', 88);
     await nextFrame();
@@ -379,10 +382,50 @@ class App {
   setRouteFocus(route) {
     const keys = route ? new Set(route.legs.flatMap((l) => l.all.map((i) => this.network.lines[l.line].stops[i].key))) : null;
     this.routeKeys = keys;
-    for (const L of this.labels) {
+    for (const L of this.labels.concat(this.map2d.labels)) {
       if (L.kind !== 'station') continue;
       L.el.classList.toggle('on-route', !!keys && keys.has(L.cx.key));
     }
+  }
+
+  // ------------------------------------------------------------ modo mapa 2D
+  activeScene() {
+    return this.map2d && this.map2d.active ? this.map2d.scene : this.scene;
+  }
+  // Proyecta un punto del mundo 3D a la vista activa (en 2D queda sobre el plano)
+  toView(v, lift = 1.5) {
+    if (this.map2d && this.map2d.active) v.y = lift;
+    return v;
+  }
+
+  async setMap2D(on) {
+    if (!!on === !!this.map2d.active) return this.map2d.active;
+    if (on && !this.map2d.built) {
+      this.ui.toast('Dibujando el mapa 2D…', 1500);
+      await nextFrame();
+      this.map2d.build();
+      for (const id of Object.keys(LINE_BY_ID)) this.map2d.setLineVisible(id, this.visibleLines.has(id));
+      this.map2d.feederGroup.visible = this.layers.feeders;
+    }
+    this.ui.closeCard();
+    this.clearPoiPins();
+    // Ocultar las etiquetas HTML de la escena que deja de dibujarse
+    const old = on ? this.scene : this.map2d.scene;
+    old.traverse((o) => o.isCSS2DObject && (o.element.style.display = 'none'));
+    this.map2d.active = on;
+    this.director.flatY = on ? 0 : null;
+    const tg = this.controls.target;
+    const cam = this.camera;
+    const off = cam.position.clone().sub(tg);
+    const newY = on ? 0 : this.terrain.heightAt(tg.x, tg.z);
+    tg.y = newY;
+    cam.position.copy(tg).add(off);
+    this.controls.maxPolarAngle = on ? 1.18 : 1.42;
+    if (!this.journey.active || this.journey.finished) {
+      const d = Math.min(off.length(), 1600);
+      await this.director.flyTo(tg.clone(), this.director.viewOf(tg, d, on ? 0.95 : 0.75), 1.1, { lift: 0 });
+    }
+    return on;
   }
 
   // ------------------------------------------------------------ sitios de interés
@@ -401,7 +444,7 @@ class App {
 
   clearPoiPins() {
     for (const pin of this.poiPins) {
-      this.scene.remove(pin.group);
+      pin.group.parent?.remove(pin.group);
       pin.label.element.remove();
       const i = this.pickables.indexOf(pin.proxy);
       if (i >= 0) this.pickables.splice(i, 1);
@@ -427,8 +470,9 @@ class App {
       b.sphere(0.7, 1, color, { p: [0, 3.35, 0] });
       b.sphere(0.3, 0, '#ffffff', { p: [0, 3.4, 0.45], layer: 'glow' });
       const group = b.build();
-      group.position.copy(loc.pos);
-      this.scene.add(group);
+      group.position.copy(this.toView(loc.pos.clone(), 0));
+      if (this.map2d.active) group.scale.setScalar(2.2);
+      this.activeScene().add(group);
       const el = document.createElement('div');
       el.className = 'poi-label';
       el.innerHTML = `<i style="background:${color}"></i>${name}`;
@@ -442,14 +486,14 @@ class App {
       proxy.position.set(0, 2.5, 0);
       group.add(proxy);
       this.pickables.push(proxy);
-      this.poiPins.push({ name, group, label, proxy, base: loc.pos.y });
+      this.poiPins.push({ name, group, label, proxy, base: group.position.y });
     }
   }
 
   selectPoiPin(name) {
     for (const pin of this.poiPins) {
       const on = pin.name === name;
-      pin.group.scale.setScalar(on ? 1.5 : 1);
+      pin.group.scale.setScalar((on ? 1.5 : 1) * (this.map2d.active ? 2.2 : 1));
       pin.label.element.classList.toggle('on', on);
     }
   }
@@ -542,7 +586,8 @@ class App {
       const rect = dom.getBoundingClientRect();
       ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
       ray.setFromCamera(ndc, this.camera);
-      const list = this.pickables.filter((p) => this.isPickable(p));
+      const src = this.map2d.active ? this.map2d.pickables.concat(this.poiPins.map((q) => q.proxy)) : this.pickables;
+      const list = src.filter((p) => this.isPickable(p));
       const hits = ray.intersectObjects(list, false);
       return hits[0]?.object;
     };
@@ -597,6 +642,7 @@ class App {
     if (u.type === 'poi') return true;
     if (u.type === 'landmark') return this.layers.landmarks;
     const cx = this.network.complexes[u.key];
+    if (!u.line) return cx.lines.some((l) => this.visibleLines.has(l));
     return cx.lines.some((l) => this.visibleLines.has(l)) && this.visibleLines.has(u.line);
   }
 
@@ -658,12 +704,14 @@ class App {
     if (this.infra[id]) this.infra[id].visible = v;
     for (const g of this.stationGroups[id] || []) g.visible = v;
     this.traffic.setLineVisible(id, v);
+    if (this.map2d.built) this.map2d.setLineVisible(id, v);
   }
   setLayer(name, v) {
     this.layers[name] = v;
     if (name === 'feeders') {
       this.feederGroup.visible = v;
       this.traffic.setFeedersVisible(v);
+      if (this.map2d.built) this.map2d.feederGroup.visible = v;
     } else if (name === 'landmarks') {
       for (const lm of this.landmarks) lm.group.visible = v;
     } else if (name === 'people') {
@@ -702,11 +750,14 @@ class App {
     const dt = Math.min(0.05, rawDt);
     const t = this.clock.elapsedTime;
     this.fps = (this.fps || 30) * 0.95 + (1 / Math.max(rawDt, 1e-3)) * 0.05;
+    const in2D = this.map2d.active;
     this.journey.update(dt);
-    this.traffic.update(dt, t);
-    for (const a of this.anims) a(t);
-    this.clouds.update(dt);
-    this.particles.update(dt);
+    if (!in2D) {
+      this.traffic.update(dt, t);
+      for (const a of this.anims) a(t);
+      this.clouds.update(dt);
+      this.particles.update(dt);
+    }
     this.controls.enabled = !this.director.fly;
     this.director.update(dt);
     this.controls.update(dt);
@@ -716,7 +767,7 @@ class App {
     tg.x = Math.max(-1000, Math.min(1150, tg.x));
     tg.z = Math.max(-1250, Math.min(1250, tg.z));
     const cam = this.camera;
-    const gy = this.terrain.heightAt(cam.position.x, cam.position.z);
+    const gy = in2D ? 0 : this.terrain.heightAt(cam.position.x, cam.position.z);
     if (cam.position.y < gy + 1.5) cam.position.y = gy + 1.5;
 
     // Día / noche
@@ -761,7 +812,7 @@ class App {
     // Personas (solo cerca de la cámara)
     const camP = cam.position;
     for (const o of this.people) {
-      const near = this.layers.people && Math.abs(o.home.x - camP.x) < 260 && Math.abs(o.home.z - camP.z) < 260 && dist < 400;
+      const near = !in2D && this.layers.people && Math.abs(o.home.x - camP.x) < 260 && Math.abs(o.home.z - camP.z) < 260 && dist < 400;
       o.p.visible = near;
       if (!near) continue;
       o.t += dt;
@@ -778,7 +829,8 @@ class App {
 
     // Etiquetas por nivel de zoom
     this._lf = (this._lf || 0) + 1;
-    if (this._lf % 4 === 0) this.updateLabels();
+    if (this._lf % 4 === 0) this.updateLabels(in2D ? this.map2d.labels : this.labels);
+    if (in2D) this.map2d.update(dt, t, dist);
 
     this.ui.updateCard();
     const inJ = this.journey.active && !this.journey.finished;
@@ -792,15 +844,16 @@ class App {
     const off = cam.position.clone().sub(tg);
     this.ui.setCompass(Math.atan2(off.x, off.z));
 
-    this.renderer.render(this.scene, cam);
-    this.labelRenderer.render(this.scene, cam);
+    const drawScene = in2D ? this.map2d.scene : this.scene;
+    this.renderer.render(drawScene, cam);
+    this.labelRenderer.render(drawScene, cam);
   }
 
-  updateLabels() {
+  updateLabels(list = this.labels) {
     const cam = this.camera.position;
     const tgt = this.controls.target;
     const camDist = cam.distanceTo(tgt);
-    for (const L of this.labels) {
+    for (const L of list) {
       let vis;
       if (L.kind === 'landmark') {
         const d = cam.distanceTo(L.obj.position);

@@ -1,0 +1,44 @@
+Aburrá 3D
+Copyright (c) 2026 Sebaslzs. Todos los derechos reservados.
+
+Este software, su código fuente, diseño, modelos 3D, textos y demás
+materiales incluidos en este repositorio son propiedad exclusiva de su autor.
+
+Que el código sea visible públicamente NO concede ninguna licencia. Sin
+autorización previa y por escrito del autor, queda prohibido:
+
+  - copiar, reproducir o redistribuir el software, total o parcialmente;
+  - modificarlo o crear obras derivadas;
+  - usarlo con fines comerciales o institucionales, incluido su despliegue
+    en sitios web, aplicaciones, pantallas o servicios de terceros;
+  - sublicenciarlo, venderlo o alquilarlo.
+
+Se permite únicamente ver el código en este repositorio y ejecutarlo de forma
+local con fines de evaluación personal.
+
+Para solicitar licencias de uso o comerciales, contacta al autor a través de
+https://github.com/Sebaslzs
+
+EL SOFTWARE SE ENTREGA "TAL CUAL", SIN GARANTÍAS DE NINGÚN TIPO. EN NINGÚN
+CASO EL AUTOR SERÁ RESPONSABLE POR DAÑOS DERIVADOS DE SU USO.
+
+--------------------------------------------------------------------------
+Aviso de marcas y datos
+--------------------------------------------------------------------------
+Aburrá 3D es un proyecto independiente y no oficial. No está afiliado a la
+Empresa de Transporte Masivo del Valle de Aburrá Limitada (Metro de Medellín)
+ni cuenta con su respaldo. "Metro de Medellín", "Metrocable", "Metroplús" y
+"Cívica" son marcas de sus respectivos titulares y se mencionan solo con
+fines descriptivos. Los datos del sistema provienen de fuentes públicas
+(metrodemedellin.gov.co y metrodela80.gov.co).
+
+--------------------------------------------------------------------------
+Componentes de terceros
+--------------------------------------------------------------------------
+Este proyecto incluye software de terceros con sus propias licencias, que
+se conservan:
+
+  - three.js (https://threejs.org): licencia MIT,
+    Copyright © 2010-2026 three.js authors.
+  - esbuild (https://esbuild.github.io), solo como herramienta de
+    compilación: licencia MIT, Copyright (c) 2020 Evan Wallace.
